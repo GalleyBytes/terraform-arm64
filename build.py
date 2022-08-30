@@ -1,7 +1,7 @@
 import requests
 import argparse
 import re
-from pprint import pprint
+import docker
 
 def terraform_versions(url):
     print(url)
@@ -17,9 +17,16 @@ def terraform_versions(url):
             break
     return versions
 
+def print_buildlogs(logs):
+    for log in logs:
+        if log.get("stream"):
+            print(log.get("stream"), end="")
+        if log.get("aux"):
+            print(log.get("aux"))
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--repo', required=True, help="Github organization owner of image")
+    parser.add_argument('-r', '--repo', required=True, help="Dockerhub organization owner of image")
     parser.add_argument('-i', '--image', required=True, help="Container Image (no tags)")
     args = parser.parse_args()
 
@@ -32,9 +39,28 @@ if __name__ == "__main__":
             if re.match("[0-9]+.[0-9]+.[0-9]+", v):
                 if int(v.split(".")[0]) != 0 or int(v.split(".")[1]) >= 11:
                     unbuilt_versions.append(v)
-    print(unbuilt_versions)
 
 
-    # TODO docker build and push
+    client = docker.from_env()
+    for version in unbuilt_versions:
+        resp = requests.head(f"https://releases.hashicorp.com/terraform/{version}/terraform_{version}_linux_arm64.zip")
+        if resp.status_code == 200:
+            arch = "arm64"
+        else:
+            arch = "arm"
 
+        build, build_logs = client.images.build(
+            path=".",
+            dockerfile="Dockerfile",
+            tag=f"{args.repo}/{args.image}:{version}",
+            rm=False,
+            quiet=False,
+            nocache=False,
+            platform="linux/arm64/v8",
+            buildargs={"VERSION":version, "ARCH":arch}
+        )
+        print_buildlogs(build_logs)
+
+        for line in client.images.push(f"{args.repo}/{args.image}", tag=version, stream=True, decode=True):
+            print(line)
 
