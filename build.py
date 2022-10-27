@@ -101,7 +101,7 @@ if __name__ == "__main__":
             path=".",
             dockerfile="Dockerfile",
             tag=f"{image}:{version}",
-            rm=False,
+            rm=True,
             quiet=False,
             nocache=False,
             platform="linux/arm64/v8",
