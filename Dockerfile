@@ -1,5 +1,5 @@
-FROM docker.io/library/alpine@sha256:c74f1b1166784193ea6c8f9440263b9be6cae07dfe35e32a5df7a31358ac2060
-RUN apk add bash curl
+FROM docker.io/library/alpine:latest
+RUN apk add bash curl openssh
 ARG VERSION
 ARG ARCH
 RUN wget "https://releases.hashicorp.com/terraform/${VERSION}/terraform_${VERSION}_linux_${ARCH}.zip"
